@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Football Draft Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Fantasy Football Draft Assistant</h1>
+        <div id="adpFilters">
+            <button data-source="ESPN">ESPN</button>
+            <button data-source="FantasyPros">FantasyPros</button>
+            <button data-source="Sleeper">Sleeper</button>
+            <button data-source="RotoViz">RotoViz</button> <!-- New Button -->
+</div>
+
+    </header>
+
+    <main>
+        <section id="tableSection">
+            <table id="adpTable"></table>
+        </section>
+
+        <aside id="sidebar">
+            <div id="rosterTracker">
+                <h2>My Roster</h2>
+                <ul id="rosterList"></ul>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
