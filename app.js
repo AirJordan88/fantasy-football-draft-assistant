@@ -102,6 +102,7 @@ async function loadEspnData() {
   }
 }
 
+// ✅ Load RotoViz CSV from local folder
 async function loadRotoVizData() {
   try {
     const response = await fetch("RVRedraftRankings.csv");
@@ -136,6 +137,8 @@ async function loadRotoVizData() {
 }
 
 
+
+
 // ✅ Generate mock data for ESPN and RotoViz
 function generateMockData(source) {
   const positions = ["QB", "RB", "WR", "TE"];
@@ -160,14 +163,25 @@ const adpData = {
 };
 
 let currentSource = "ESPN";
-let draftedPlayers = new Set();
-let roster = {
-  QB: [],
-  RB: [],
-  WR: [],
-  TE: [],
-  FLEX: []
-};
+const draftedPlayers = new Map(); // key: player.name, value: teamId
+const teamRosters = {};
+const teamNames = [];
+const totalTeams = 12;
+
+for (let i = 0; i < totalTeams; i++) {
+  const teamId = `team${i + 1}`;
+  teamRosters[teamId] = {
+    QB: [],
+    RB: [],
+    WR: [],
+    TE: [],
+    FLEX: []
+  };
+  teamNames.push(`Team ${i + 1}`);
+}
+
+let currentTeam = "team1"; // Default to your team
+
 
 // ✅ Load external data and render
 Promise.all([
@@ -188,6 +202,48 @@ Promise.all([
 
   renderTable(currentSource); // Initial render after data loads
 });
+
+const teamSelector = document.getElementById("teamSelector");
+teamNames.forEach((name, i) => {
+  const option = document.createElement("option");
+  option.value = `team${i + 1}`;
+  option.textContent = name;
+  teamSelector.appendChild(option);
+});
+
+teamSelector.addEventListener("change", () => {
+  currentTeam = teamSelector.value;
+  updateRosterDisplay();
+});
+
+const teamNameInput = document.getElementById("teamNameInput");
+const renameTeamBtn = document.getElementById("renameTeamBtn");
+
+renameTeamBtn.addEventListener("click", () => {
+  const newName = teamNameInput.value.trim();
+  if (!newName) return;
+
+  const teamIndex = parseInt(currentTeam.replace("team", "")) - 1;
+  teamNames[teamIndex] = newName;
+
+  // Update selector label
+  teamSelector.options[teamIndex].textContent = newName;
+
+  // Save to localStorage
+  localStorage.setItem("teamNames", JSON.stringify(teamNames));
+
+  updateRosterDisplay();
+  teamNameInput.value = "";
+});
+
+
+const savedNames = JSON.parse(localStorage.getItem("teamNames"));
+if (Array.isArray(savedNames) && savedNames.length === totalTeams) {
+  for (let i = 0; i < totalTeams; i++) {
+    teamNames[i] = savedNames[i];
+  }
+}
+
 
 // ✅ Filter buttons
 document.querySelectorAll("#adpFilters button").forEach(btn => {
@@ -243,18 +299,31 @@ function renderTable(source) {
         cell.dataset.position = player.position;
         cell.dataset.tier = player.tier;
 
-        if (draftedPlayers.has(player.id)) {
+        const draftedBy = draftedPlayers.get(player.name);
+        if (draftedBy) {
           cell.classList.add("drafted");
-        }
+          cell.title = `Drafted by ${teamNames[parseInt(draftedBy.replace("team", "")) - 1]}`;
+          
+          if (draftedBy !== currentTeam) {
+            cell.style.opacity = "0.5";
+            }
+          }
+
+
 
         cell.addEventListener("click", () => {
-          if (draftedPlayers.has(player.id)) {
-            draftedPlayers.delete(player.id);
+          const draftedBy = draftedPlayers.get(player.name);
+
+          if (draftedBy && draftedBy !== currentTeam) {
+            return; // Already drafted by another team
+          } 
+
+          if (draftedBy === currentTeam) {
             removeFromRoster(player);
           } else {
-            draftedPlayers.add(player.id);
             addToRoster(player);
           }
+          
           renderTable(currentSource);
         });
       } else {
@@ -272,29 +341,40 @@ function renderTable(source) {
 // ✅ Add player to roster
 function addToRoster(player) {
   const pos = player.position;
-  if (roster[pos]) {
-    roster[pos].push(player.name);
-  } else {
-    roster.FLEX.push(player.name);
+  const roster = teamRosters[currentTeam];
+  const target = roster[pos] || roster.FLEX;
+  if (!target.includes(player.name)) {
+    target.push(player.name);
   }
+  draftedPlayers.set(player.name, currentTeam); // Track who drafted it
   updateRosterDisplay();
 }
 
 function removeFromRoster(player) {
+  const roster = teamRosters[currentTeam];
   const pos = player.position;
+
   if (roster[pos]) {
     roster[pos] = roster[pos].filter(name => name !== player.name);
   } else {
     roster.FLEX = roster.FLEX.filter(name => name !== player.name);
   }
+
+  draftedPlayers.delete(player.name); // Only remove if current team owns it
   updateRosterDisplay();
 }
+
+
 
 
 // ✅ Update roster display
 function updateRosterDisplay() {
   const list = document.getElementById("rosterList");
+  const title = document.getElementById("teamTitle");
   list.innerHTML = "";
+
+  const roster = teamRosters[currentTeam];
+  title.textContent = teamNames[parseInt(currentTeam.replace("team", "")) - 1];
 
   Object.entries(roster).forEach(([pos, players]) => {
     const item = document.createElement("li");
@@ -302,3 +382,4 @@ function updateRosterDisplay() {
     list.appendChild(item);
   });
 }
+

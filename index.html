@@ -27,7 +27,18 @@
             <div id="rosterTracker">
                 <h2>My Roster</h2>
                 <ul id="rosterList"></ul>
+                <h2 id="teamTitle">My Roster</h2>
+                <select id="teamSelector"></select>
+                <ul id="rosterList"></ul>
             </div>
+            <div id="teamNameEditor">
+                <label for="teamNameInput">Rename Team:</label>
+                <input type="text" id="teamNameInput" placeholder="Enter new name" />
+                <button id="renameTeamBtn">Update</button>
+                <button onclick="localStorage.removeItem('teamNames'); location.reload();">Reset Team Names</button>
+                <button data-source="DraftTargets">Show 🎯 Targets</button>
+            </div>
+
         </aside>
     </main>
 
