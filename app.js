@@ -102,6 +102,44 @@ async function loadEspnData() {
   }
 }
 
+// ✅ Load ESPN CSV from local folder
+async function loadEspnTop300() {
+  try {
+    const response = await fetch("NFL25_Cleaned.csv");
+    const text = await response.text();
+    const lines = text.split("\n").slice(1); // Skip header
+    console.log("Raw ESPN lines:", lines.slice(0, 5));
+
+    return lines.map((line, i) => {
+      const parts = line.split(",").map(p => p.replace(/"/g, "").trim());
+      console.log("Parsed ESPN row:", parts);
+      if (parts.length < 6) return null;
+
+      const [name, team, bye, pos, , adp] = parts;
+      const parsedAdp = parseFloat(adp);
+      if (!name || !pos || isNaN(parsedAdp)) {
+        console.warn("Skipping invalid ESPN row:", { name, pos, adp });
+        return null;
+      }
+      if (["K", "DST"].includes(pos.replace(/\d+$/, ""))) return null;
+
+
+      return {
+        id: `ESPN-${i}`,
+        name,
+        team,
+        bye,
+        position: pos.replace(/\d+$/, ""),
+        adp: parsedAdp,
+        tier: Math.ceil(i / 15)
+      };
+    }).filter(Boolean);
+  } catch (err) {
+    console.error("ESPN load error:", err);
+    return [];
+  }
+}
+
 // ✅ Load RotoViz CSV from local folder
 async function loadRotoVizData() {
   try {
@@ -188,17 +226,20 @@ Promise.all([
   loadFantasyProsData(),
   loadSleeperData(),
   loadEspnData(),
-  loadRotoVizData()
-]).then(([fantasyPros, sleeper, espn, rotoViz]) => {
+  loadRotoVizData(),
+  loadEspnTop300()
+]).then(([fantasyPros, sleeper, espn, rotoViz, espntop300]) => {
   console.log("FantasyPros loaded:", fantasyPros.slice(0, 5));
   console.log("Sleeper loaded:", sleeper.slice(0, 5));
   console.log("ESPN loaded:", espn.slice(0, 5));
   console.log("RotoViz loaded:", espn.slice(0, 5));
+  console.log("ESPNTop300 loaded", espn.slice(0, 5));
 
   adpData.FantasyPros = fantasyPros;
   adpData.Sleeper = sleeper;
   adpData.ESPN = espn;
   adpData.RotoViz = rotoViz;
+  adpData.ESPNTop300 = espntop300;
 
   renderTable(currentSource); // Initial render after data loads
 });
